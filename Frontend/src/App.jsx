@@ -77,7 +77,7 @@ function CreateQuizPage() {
 // Main Landing Page Component
 function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [theme, setTheme] = useState('dark')
+  const [theme, setTheme] = useState('light')
   const [mounted, setMounted] = useState(false)
   const navigate = useNavigate()
 
@@ -86,10 +86,38 @@ function LandingPage() {
     // Check for saved theme or default to light
     const savedTheme = localStorage.getItem('theme') || 'light'
     setTheme(savedTheme)
+    
+    // Apply theme to document
     if (savedTheme === 'dark') {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
+    }
+    
+    // Debug log
+    console.log('Initial theme:', savedTheme)
+    console.log('Document classes:', document.documentElement.classList.toString())
+    
+    // Also check system preference if no saved theme
+    if (!localStorage.getItem('theme')) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (prefersDark) {
+        setTheme('dark')
+        document.documentElement.classList.add('dark')
+        localStorage.setItem('theme', 'dark')
+      }
+    }
+    
+    // Listen for theme changes from other components
+    const handleThemeChange = () => {
+      const currentTheme = localStorage.getItem('theme') || 'light'
+      setTheme(currentTheme)
+    }
+    
+    window.addEventListener('theme-change', handleThemeChange)
+    
+    return () => {
+      window.removeEventListener('theme-change', handleThemeChange)
     }
   }, [])
 
@@ -97,11 +125,41 @@ function LandingPage() {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
     setTheme(newTheme)
     localStorage.setItem('theme', newTheme)
+    
+    // Apply theme to document
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
     }
+    
+    // Debug log
+    console.log('Theme toggled to:', newTheme)
+    console.log('Document classes:', document.documentElement.classList.toString())
+    
+    // Show toast notification
+    const toast = document.createElement('div')
+    toast.className = `fixed top-20 right-4 z-50 px-4 py-2 rounded-lg text-white font-medium transition-all duration-300 ${
+      newTheme === 'dark' 
+        ? 'bg-gray-800 border border-gray-600' 
+        : 'bg-white border border-gray-300 text-gray-900'
+    }`
+    toast.textContent = `Switched to ${newTheme} mode`
+    document.body.appendChild(toast)
+    
+    // Remove toast after 2 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0'
+      toast.style.transform = 'translateX(100%)'
+      setTimeout(() => {
+        document.body.removeChild(toast)
+      }, 300)
+    }, 2000)
+    
+    // Force a re-render to ensure all components update
+    setTimeout(() => {
+      window.dispatchEvent(new Event('theme-change'))
+    }, 0)
   }
 
   const handleSmoothScroll = (e, targetId) => {
@@ -160,6 +218,7 @@ function LandingPage() {
             <button
               onClick={toggleTheme}
               className="relative p-3 rounded-xl bg-slate-100 dark:bg-gray-900/50 border border-navy-500/20 dark:border-blue-500/20 hover:border-navy-600/40 dark:hover:border-blue-400/40 transition-all duration-300 group overflow-hidden"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               <div className="relative z-10">
                 {theme === 'dark' ? (
@@ -169,6 +228,9 @@ function LandingPage() {
                 )}
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-navy-500/10 to-blue-600/10 dark:from-blue-400/10 dark:to-cyan-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              {/* Theme indicator */}
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
             </button>
           </div>
         </nav>
